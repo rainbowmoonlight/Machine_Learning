@@ -232,9 +232,118 @@ def main():
 
 	elif choice == "Audio":
 		st.subheader("Audio MetaData Extraction")
+		# File Upload
+		audio_file = st.file_uploader("Upload Audio", type=['mp3','ogg'])
+		if audio_file is not None:
+
+			# Layouts
+			col1, col2 = st.beta_columns(2)
+
+			with col1:
+				st.audio(audio_file.read())
+
+			with col2:
+				with st.beta_expander("File Stats"):
+					file_details = {"FileName":audio_file.name,
+					"FileSize":audio_file.size,"FileType":audio_file.type}
+					st.write(file_details)
+
+					statinfo = os.stat(audio_file.readable())
+					# st.write(statinfo)
+					stats_details = {"Accessed_Time":get_readable_time(statinfo.st_atime),
+					"Creation_Time":get_readable_time(statinfo.st_ctime),
+					"Modified_Time":get_readable_time(statinfo.st_mtime),
+					}
+					st.write(stats_details)
+
+					# Combine All Details
+					file_details_combined ={"FileName":audio_file.name,
+					"FileSize":audio_file.size,"FileType":audio_file.type,
+					"Accessed_Time":get_readable_time(statinfo.st_atime),
+					"Creation_Time":get_readable_time(statinfo.st_ctime),
+					"Modified_Time":get_readable_time(statinfo.st_mtime)}
+
+					# Convert to DataFrame
+					df_file_details = pd.DataFrame(list(file_details_combined.items()),
+						columns=["Meta Tags","Value"])
+					st.dataframe(df_file_details)
+
+			# Extraction Process using mutagen
+			
+			with st.beta_expander("Metadata with Mutagen"):
+				meta_tags = mutagen.File(audio_file)
+				# st.write(meta_tags)
+				df_audio_details_with_mutagen = pd.DataFrame(list(meta_tags.items()),
+						columns=["Meta Tags","Value"])
+				st.dataframe(df_audio_details_with_mutagen)
+
+
+
+			with st.beta_expander("Download Results"):
+				final_df = pd.concat([df_file_details,df_audio_details_with_mutagen])
+				st.dataframe(final_df)
+				make_downloadable(final_df)
+
+		# Extraction Process using mutagen
+
 
 	elif choice == "DocumentFiles":
 		st.subheader("DocumentFiles MetaData Extraction")	
+
+		# File Upload
+		text_file =st.file_uploader("Upload File",type=["PDF"])
+		if text_file is not None:
+			dcol1,dcol2 = st.beta_columns([1,2])
+
+			with dcol1:
+				with st.beta_expander("File Stats"):
+					file_details = {"FileName":text_file.name,
+					"FileSize":text_file.size,"FileType":text_file.type}
+					st.write(file_details)
+
+					statinfo = os.stat(text_file.readable())
+			
+					stats_details = {"Accessed_Time":get_readable_time(statinfo.st_atime),
+					"Creation_Time":get_readable_time(statinfo.st_ctime),
+					"Modified_Time":get_readable_time(statinfo.st_mtime),
+					}
+					st.write(stats_details)
+
+					# Combine All Details
+					file_details_combined ={"FileName":text_file.name,
+					"FileSize":text_file.size,"FileType":text_file.type,
+					"Accessed_Time":get_readable_time(statinfo.st_atime),
+					"Creation_Time":get_readable_time(statinfo.st_ctime),
+					"Modified_Time":get_readable_time(statinfo.st_mtime)}
+
+					# Convert to DataFrame
+					df_file_details = pd.DataFrame(list(file_details_combined.items()),
+						columns=["Meta Tags","Value"])
+
+					# st.dataframe(df_file_details)
+					# Track Details
+					# add_file_details(text_file.name,text_file.type,text_file.size,datetime.now())
+
+		# Extraction Process
+			with dcol2:
+				with st.beta_expander("Metadata"):
+					pdf_file = PdfFileReader(text_file)
+					pdf_info = pdf_file.getDocumentInfo()
+					# st.write(pdf_info)
+					# Convert to DataFrame
+					df_file_details_with_pdf = pd.DataFrame(list(pdf_info.items()),
+						columns=["Meta Tags","Value"])
+
+					st.dataframe(df_file_details)
+
+
+
+		# Download
+		with st.beta_expander("Download Results"):
+			final_df = pd.concat([df_file_details,df_file_details_with_pdf])
+			st.dataframe(final_df)
+			make_downloadable(final_df)
+
 
 	elif choice == "About":
 		st.subheader("MetaData Extraction App")
