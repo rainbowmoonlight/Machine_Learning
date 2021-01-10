@@ -9,6 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt 
 import matplotlib 
 matplotlib.use('Agg')
+import seaborn as sns
 
 # Opening Files/Forensic MetaData Extraction
 # For Images
@@ -101,6 +102,25 @@ def make_downloadable(data):
 	href = f'<a href="data:file/csv;base64,{b64}" download="{new_filename}">Click Here!</a>'
 	st.markdown(href,unsafe_allow_html=True)
 
+# Database Management
+import sqlite3
+conn = sqlite3.connect('data.db')
+c = conn.cursor()
+
+# Table
+def create_uploaded_filetable():
+	c.execute('CREATE TABLE IF NOT EXISTS filestable(filename TEXT, filetype TEXT, filesize TEXT, uploadDate TIMESTAMP)')
+
+# Adding Details
+def add_file_details(filename,filetype,filesize,uploadDate):
+	c.execute('INSERT INTO filestable(filename,filetype,filesize,uploadDate) VALUES (?,?,?,?)',(filename,filetype,filesize,uploadDate))
+	conn.commit()
+
+# View Details
+def view_all_data():
+	c.execute('SELECT * FROM filestable')
+	data = c.fetchall()
+	return data
 
 # App Structure
 def main():
@@ -109,8 +129,9 @@ def main():
 	stc.html(HTML_BANNER)
 
 
-	menu = ["Home","Image","Audio","DocumentFiles","About"]
+	menu = ["Home","Image","Audio","DocumentFiles","Analytics","About"]
 	choice = st.sidebar.selectbox("Menu",menu)
+	create_uploaded_filetable()
 
 	if choice == 'Home':
 		st.subheader("Home")
@@ -174,6 +195,9 @@ def main():
 				# Convert to DataFrame
 				df_file_details = pd.DataFrame(list(file_details_combined.items()), columns=["Meta Tags","Value"])
 				st.dataframe(df_file_details)
+
+				# Track Details
+				add_file_details(image_file.name, image_file.type, image_file.size, datetime.now())
 
 			# Layouts
 			c1,c2 = st.beta_columns(2)
@@ -268,6 +292,9 @@ def main():
 						columns=["Meta Tags","Value"])
 					st.dataframe(df_file_details)
 
+					# Track Details
+					add_file_details(audio_file.name,audio_file.type,audio_file.size,datetime.now())
+
 			# Extraction Process using mutagen
 			
 			with st.beta_expander("Metadata with Mutagen"):
@@ -322,7 +349,7 @@ def main():
 
 					# st.dataframe(df_file_details)
 					# Track Details
-					# add_file_details(text_file.name,text_file.type,text_file.size,datetime.now())
+					add_file_details(text_file.name,text_file.type,text_file.size,datetime.now())
 
 		# Extraction Process
 			with dcol2:
@@ -344,6 +371,24 @@ def main():
 			st.dataframe(final_df)
 			make_downloadable(final_df)
 
+
+	elif choice == "Analytics":
+		st.subheader("Analytics")
+		all_uploaded_files = view_all_data()
+		df = pd.DataFrame(all_uploaded_files,columns=["FileName","FileType","FileSize","Upload_Time"])
+
+		# Monitor All Uploads
+		with st.beta_expander("Monitor"):
+			st.success("View All Uploaded Files")	
+			st.dataframe(df)
+
+
+
+		# Stats of Uploaded Files
+		with st.beta_expander("Distribution of FileTypes"):
+			fig = plt.figure()
+			sns.countplot(df['FileType'])
+			st.pyplot(fig)
 
 	elif choice == "About":
 		st.subheader("MetaData Extraction App")
